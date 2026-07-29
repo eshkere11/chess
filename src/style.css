@@ -1,0 +1,215 @@
+:root {
+  color: #f8fafc;
+  background-color: #020617;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #1e293b 0%, #020617 60%, #000 100%);
+}
+
+body {
+  color: #f8fafc;
+}
+
+#app {
+  width: 100%;
+  height: 100%;
+}
+
+#game-root {
+  width: 100%;
+  height: 100%;
+}
+
+.startup-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at 50% 30%, rgba(37, 57, 83, 0.18), #000 74%);
+  opacity: 1;
+  transition: opacity 650ms ease;
+}
+
+.startup-menu.is-leaving {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.startup-menu__panel {
+  width: min(100%, 440px);
+  padding: 2rem;
+  border: 1px solid rgba(202, 172, 127, 0.55);
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, rgba(34, 25, 20, 0.97), rgba(12, 17, 27, 0.97));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65), inset 0 1px rgba(255, 232, 190, 0.13);
+}
+
+.startup-menu__eyebrow {
+  margin: 0;
+  color: #d8ae72;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.startup-menu h1 {
+  margin: 0.4rem 0 1.75rem;
+  color: #fff2d9;
+  font-size: clamp(2rem, 7vw, 3rem);
+  line-height: 1;
+}
+
+.startup-menu__group {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(238, 211, 172, 0.16);
+}
+
+.startup-menu__options { gap: 0.8rem; }
+.startup-menu__field, .startup-menu__toggle { display: grid; gap: 0.35rem; color: #ead8bd; font-size: 0.9rem; }
+.startup-menu__toggle { grid-template-columns: 1fr auto; align-items: center; }
+.startup-menu__field > span { display: flex; justify-content: space-between; gap: 1rem; }
+.startup-menu em { color: #978673; font-size: 0.74rem; font-style: normal; }
+.startup-menu input[type='range'] { width: 100%; accent-color: #d59853; }
+.startup-menu input[type='checkbox'] { width: 1.05rem; height: 1.05rem; accent-color: #d59853; }
+.startup-menu select { border: 1px solid #765238; border-radius: 0.4rem; padding: 0.45rem; color: #fff2d9; background: #2e211b; }
+
+.startup-menu__segmented { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; }
+.startup-menu__segmented button, .startup-menu__start { border: 1px solid #765238; border-radius: 0.5rem; padding: 0.65rem 0.8rem; color: #f8e8ce; background: #2c211c; cursor: pointer; }
+.startup-menu__segmented button.is-selected { border-color: #e0a05a; background: linear-gradient(#9d6031, #68391f); }
+.startup-menu__start { width: 100%; margin-top: 1.5rem; border-color: #ebae67; font-size: 1rem; font-weight: 800; background: linear-gradient(#b97038, #773b1e); box-shadow: inset 0 1px rgba(255, 236, 192, 0.35); }
+.startup-menu__start:hover { filter: brightness(1.12); }
+.startup-menu__hint { margin: 1rem 0 0; color: #af9b83; font-size: 0.76rem; text-align: center; }
+.startup-menu kbd { padding: 0.1rem 0.3rem; border: 1px solid #6c5746; border-radius: 0.2rem; color: #e7d3b2; }
+.startup-menu .is-hidden { display: none; }
+
+canvas {
+  display: block;
+}
+
+.elevator-destination-menu {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(2, 6, 23, 0.42);
+  z-index: 2;
+}
+
+.elevator-destination-menu.is-visible {
+  display: flex;
+}
+
+.elevator-destination-menu__panel {
+  position: relative;
+  display: grid;
+  gap: 0.7rem;
+  min-width: 190px;
+  padding: 2.5rem 1rem 1rem;
+  border: 2px solid #3a2417;
+  border-radius: 0.75rem;
+  background:
+    linear-gradient(90deg, rgba(69, 39, 23, 0.38) 50%, transparent 50%) 0 0 / 8px 8px,
+    linear-gradient(#8b5a35, #5b341d);
+  box-shadow: inset 0 0 0 2px #b98555, 0 16px 48px rgba(0, 0, 0, 0.5);
+}
+
+.elevator-destination-menu__close {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.45rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  min-width: 0;
+  height: 2rem;
+  padding: 0;
+  font-size: 0;
+}
+
+.elevator-destination-menu__close::before,
+.elevator-destination-menu__close::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.75rem;
+  height: 2px;
+  content: '';
+  background: #fff3d1;
+  box-shadow: 0 1px 1px #1f120a;
+}
+
+.elevator-destination-menu__close::before {
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.elevator-destination-menu__close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.elevator-destination-menu button {
+  border: 1px solid #301b10;
+  border-radius: 0.45rem;
+  padding: 0.65rem 0.8rem;
+  color: #fff3d1;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 1px #1f120a;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 229, 181, 0.08) 0 2px, rgba(53, 27, 13, 0.08) 2px 4px),
+    linear-gradient(#a96e3d, #70401f);
+  box-shadow: inset 0 1px 0 rgba(255, 239, 201, 0.35), inset 0 -2px 0 rgba(48, 27, 16, 0.5), 0 2px 0 #2a180e;
+  cursor: pointer;
+}
+
+.elevator-destination-menu button:not(:disabled):hover {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 241, 201, 0.12) 0 2px, rgba(53, 27, 13, 0.06) 2px 4px),
+    linear-gradient(#c18449, #854c25);
+  transform: translateY(-1px);
+}
+
+.elevator-destination-menu__option {
+  display: grid;
+  gap: 0.15rem;
+  text-align: left;
+}
+
+.elevator-destination-menu__status {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+.elevator-destination-menu__option.is-locked,
+.elevator-destination-menu__option.is-occupied,
+.elevator-destination-menu__option.is-busy {
+  color: #cbb99f;
+  background: linear-gradient(#635044, #3d2d25);
+  box-shadow: inset 0 1px 0 rgba(255, 238, 207, 0.12), inset 0 -2px 0 rgba(20, 12, 8, 0.45);
+}
+
+.elevator-destination-menu button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
