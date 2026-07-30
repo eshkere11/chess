@@ -20,7 +20,7 @@ export class ModelManager {
     }
 
     if (!ModelManager.loadPromise) {
-      ModelManager.loadPromise = new GLTFLoader().loadAsync('/models/ChessSet.glb')
+      ModelManager.loadPromise = new GLTFLoader().loadAsync(import.meta.env.BASE_URL + 'models/ChessSet.glb')
         .then((gltf) => {
           ModelManager.gltf = gltf;
           this.cachePieceMeshes(gltf);
