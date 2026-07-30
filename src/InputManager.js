@@ -1,4 +1,5 @@
 import { Raycaster, Vector2 } from 'three';
+import { boardColumnFromX, boardRowFromZ } from './BoardCoordinates.js';
 
 export class InputManager {
   constructor(renderer, boardGroup, selectionManager, boardState, onElevatorActivate) {
@@ -95,8 +96,8 @@ export class InputManager {
       return null;
     }
 
-    const row = Math.round((3.5 - intersection.point.z / 1.2));
-    const column = Math.round(intersection.point.x / 1.2 + 3.5);
+    const row = boardRowFromZ(intersection.point.z);
+    const column = boardColumnFromX(intersection.point.x);
     if (row < 0 || row >= 8 || column < 0 || column >= 8) {
       return null;
     }

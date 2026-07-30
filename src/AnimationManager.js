@@ -1,4 +1,5 @@
 import { BOARD_SIZE, SQUARE_SIZE } from './constants.js';
+import { boardX, boardZ } from './BoardCoordinates.js';
 
 export class AnimationManager {
   constructor() {
@@ -7,8 +8,8 @@ export class AnimationManager {
   }
 
   animateMove(piece, row, column, onComplete) {
-    const targetX = (column - (BOARD_SIZE - 1) / 2) * SQUARE_SIZE;
-    const targetZ = ((BOARD_SIZE - 1) / 2 - row) * SQUARE_SIZE;
+    const targetX = boardX(column);
+    const targetZ = boardZ(row);
     const startX = piece.root.position.x;
     const startZ = piece.root.position.z;
 

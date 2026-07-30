@@ -1,5 +1,6 @@
 import { Mesh, MeshStandardMaterial, PlaneGeometry } from 'three';
 import { BOARD_SIZE, SQUARE_SIZE } from './constants.js';
+import { boardX, boardZ } from './BoardCoordinates.js';
 
 export class HighlightManager {
   constructor(boardGroup) {
@@ -30,9 +31,9 @@ export class HighlightManager {
       const mesh = move.type === 'capture' ? this.redHighlight : this.greenHighlight;
       const highlight = mesh.clone();
       highlight.position.set(
-        (move.column - (BOARD_SIZE - 1) / 2) * SQUARE_SIZE,
+        boardX(move.column),
         0.1,
-        ((BOARD_SIZE - 1) / 2 - move.row) * SQUARE_SIZE,
+        boardZ(move.row),
       );
       this.boardGroup.add(highlight);
       this.highlights.push(highlight);
@@ -56,6 +57,28 @@ export class HighlightManager {
 
   setMoveGenerator(moveGenerator) {
     this.moveGenerator = moveGenerator;
+  }
+
+  showReplayMove(entry) {
+    this.clearHighlights();
+    const parseSquare = (square) => {
+      if (!/^[a-h][1-8]$/.test(square || '')) return null;
+      return { row: 8 - Number(square[1]), column: square.charCodeAt(0) - 97 };
+    };
+    const add = (square, material) => {
+      const position = parseSquare(square);
+      if (!position) return;
+      const highlight = material.clone();
+      highlight.position.set(
+        boardX(position.column),
+        0.1,
+        boardZ(position.row),
+      );
+      this.boardGroup.add(highlight);
+      this.highlights.push(highlight);
+    };
+    add(entry.origin, this.greenHighlight);
+    add(entry.destination, entry.capture ? this.redHighlight : this.greenHighlight);
   }
 
   setBoardGroup(boardGroup) {

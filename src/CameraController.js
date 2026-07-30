@@ -24,8 +24,11 @@ export class CameraController {
     this.controls.update();
     this.focusTransition = null;
     this.introTransition = null;
+    this.endGameOrbit = null;
+    this.endGameViewing = false;
     this.transitionDuration = 500;
     this.smoothMovement = true;
+    this.playerColor = 'white';
     this.floorFocusCycle = [1, 2, 1, 0];
     this.floorFocusCycleIndex = -1;
     this.boundKeyHandler = this.onKeyDown.bind(this);
@@ -62,7 +65,45 @@ export class CameraController {
     this.smoothMovement = enabled;
   }
 
+  setPlayerColor(color) {
+    const nextColor = color === 'black' ? 'black' : 'white';
+    if (this.playerColor !== nextColor) {
+      const offset = this.camera.position.clone().sub(this.controls.target);
+      offset.x *= -1;
+      offset.z *= -1;
+      this.camera.position.copy(this.controls.target).add(offset);
+    }
+    this.playerColor = nextColor;
+    const azimuthCenter = nextColor === 'black' ? 0 : Math.PI;
+    this.controls.minAzimuthAngle = azimuthCenter - 0.55;
+    this.controls.maxAzimuthAngle = azimuthCenter + 0.55;
+    this.controls.update();
+  }
+
   setEnabled(enabled) {
+    this.controls.enabled = enabled;
+  }
+
+  startEndGameOrbit(floorY) {
+    this.focusTransition = null;
+    const target = new Vector3(0, floorY + 0.5, 0);
+    const verticalDelta = target.y - this.controls.target.y;
+    this.endGameOrbit = {
+      phase: 'focus',
+      target,
+      targetStart: this.controls.target.clone(),
+      cameraStart: this.camera.position.clone(),
+      cameraTarget: this.camera.position.clone().add(new Vector3(0, verticalDelta, 0)),
+      started: performance.now(),
+      duration: 520,
+      pause: 500,
+      orbitDuration: 4200,
+      offset: null,
+    };
+  }
+
+  setEndGameViewing(enabled) {
+    this.endGameViewing = enabled;
     this.controls.enabled = enabled;
   }
 
@@ -75,31 +116,63 @@ export class CameraController {
     };
   }
 
+  restoreTransform({ position, target, quaternion }) {
+    this.focusTransition = null;
+    this.introTransition = null;
+    this.endGameOrbit = null;
+    this.camera.position.fromArray(position);
+    this.controls.target.fromArray(target);
+    this.controls.update();
+    if (quaternion) this.camera.quaternion.fromArray(quaternion);
+  }
+
   playIntro(onComplete) {
     this.focusTransition = null;
     const gameplayTransform = this.getGameplayTransform();
-    const introPosition = new Vector3(0, FLOOR_HEIGHT * 3.9, -42);
-    const introTarget = new Vector3(0, FLOOR_HEIGHT + 0.5, 0);
+    const direction = this.playerColor === 'black' ? 1 : -1;
+    const centerTarget = new Vector3(0, FLOOR_HEIGHT + 0.5, 0);
+    const introPosition = new Vector3(0, FLOOR_HEIGHT * 5.6, direction * 62);
+    const sceneOneEnd = new Vector3(0, FLOOR_HEIGHT * 4.0, direction * 50);
+    const orbitPosition = new Vector3(-34, FLOOR_HEIGHT * 3.0, direction * 38);
+    const approachPosition = new Vector3(-8, FLOOR_HEIGHT * 2.15, direction * 23);
+
     this.camera.position.copy(introPosition);
-    this.controls.target.copy(introTarget);
+    this.controls.target.copy(centerTarget);
     this.controls.update();
     this.introTransition = {
-      startPosition: introPosition,
-      startTarget: introTarget,
+      frames: [
+        { position: introPosition, target: centerTarget, duration: 2000 },
+        { position: sceneOneEnd, target: centerTarget, duration: 2000 },
+        { position: orbitPosition, target: centerTarget, duration: 2000 },
+        { position: approachPosition, target: gameplayTransform.target, duration: 1400 },
+        { position: gameplayTransform.position, target: gameplayTransform.target, duration: 0 },
+      ],
       endPosition: gameplayTransform.position,
       endTarget: gameplayTransform.target,
       endQuaternion: gameplayTransform.quaternion,
       started: performance.now(),
-      pause: 700,
-      duration: 1600,
+      frameIndex: 0,
+      halfwayEmitted: false,
       onComplete,
     };
+    this.emitIntroEvent('IntroStarted');
   }
 
   skipIntro() {
     if (!this.introTransition) return false;
-    this.finishIntro();
+    const currentPosition = this.camera.position.clone();
+    const currentTarget = this.controls.target.clone();
+    this.introTransition.frames = [
+      { position: currentPosition, target: currentTarget, duration: 0 },
+      { position: this.introTransition.endPosition, target: this.introTransition.endTarget, duration: 420 },
+    ];
+    this.introTransition.frameIndex = 0;
+    this.introTransition.started = performance.now();
     return true;
+  }
+
+  emitIntroEvent(name) {
+    window.dispatchEvent(new CustomEvent(name));
   }
 
   finishIntro() {
@@ -109,11 +182,12 @@ export class CameraController {
     this.introTransition = null;
     this.controls.update();
     this.camera.quaternion.copy(endQuaternion);
+    this.emitIntroEvent('IntroFinished');
     onComplete?.();
   }
 
   onKeyDown(event) {
-    if (!this.controls.enabled || this.introTransition) return;
+    if (!this.controls.enabled || this.introTransition || this.endGameViewing) return;
     if (event.key.toLowerCase() !== 'q' || event.repeat) {
       return;
     }
@@ -128,14 +202,54 @@ export class CameraController {
 
   update() {
     if (this.introTransition) {
-      const { startPosition, startTarget, endPosition, endTarget, started, pause, duration } = this.introTransition;
-      const elapsed = performance.now() - started;
-      if (elapsed > pause) {
-        const progress = Math.min(1, (elapsed - pause) / duration);
+      const transition = this.introTransition;
+      const { frames } = transition;
+      const currentFrame = frames[transition.frameIndex];
+      const nextFrame = frames[transition.frameIndex + 1];
+      if (!nextFrame) {
+        this.finishIntro();
+        return;
+      }
+      const duration = currentFrame.duration;
+      const progress = duration === 0 ? 1 : Math.min(1, (performance.now() - transition.started) / duration);
+      const eased = progress * progress * (3 - 2 * progress);
+      this.camera.position.lerpVectors(currentFrame.position, nextFrame.position, eased);
+      this.controls.target.lerpVectors(currentFrame.target, nextFrame.target, eased);
+      if (transition.frameIndex === 1 && !transition.halfwayEmitted && progress >= 0.5) {
+        transition.halfwayEmitted = true;
+        this.emitIntroEvent('IntroHalfway');
+      }
+      if (progress === 1) {
+        transition.frameIndex += 1;
+        transition.started = performance.now();
+        if (transition.frameIndex >= frames.length - 1) this.finishIntro();
+      }
+      this.controls.update();
+      return;
+    }
+    if (this.endGameOrbit) {
+      const transition = this.endGameOrbit;
+      const elapsed = performance.now() - transition.started;
+      if (transition.phase === 'focus') {
+        const progress = Math.min(1, elapsed / transition.duration);
         const eased = progress * progress * (3 - 2 * progress);
-        this.camera.position.lerpVectors(startPosition, endPosition, eased);
-        this.controls.target.lerpVectors(startTarget, endTarget, eased);
-        if (progress === 1) this.finishIntro();
+        this.controls.target.lerpVectors(transition.targetStart, transition.target, eased);
+        this.camera.position.lerpVectors(transition.cameraStart, transition.cameraTarget, eased);
+        if (progress === 1) {
+          transition.phase = 'pause';
+          transition.started = performance.now();
+        }
+      } else if (transition.phase === 'pause' && elapsed >= transition.pause) {
+        transition.phase = 'orbit';
+        transition.started = performance.now();
+        transition.offset = this.camera.position.clone().sub(this.controls.target);
+      } else if (transition.phase === 'orbit') {
+        const progress = Math.min(1, elapsed / transition.orbitDuration);
+        const eased = progress * progress * (3 - 2 * progress);
+        const angle = 0.28 * eased;
+        const offset = transition.offset.clone().applyAxisAngle(new Vector3(0, 1, 0), angle);
+        this.camera.position.copy(this.controls.target).add(offset);
+        if (progress === 1) this.endGameOrbit = null;
       }
       this.controls.update();
       return;

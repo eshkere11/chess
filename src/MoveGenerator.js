@@ -56,6 +56,11 @@ export class MoveGenerator {
       }
     });
 
+    const target = this.boardState.enPassantTarget;
+    if (target && target.floor === piece.board && target.row === piece.row + direction && Math.abs(target.column - piece.column) === 1) {
+      moves.push({ row: target.row, column: target.column, type: 'en-passant', capturedRow: piece.row, capturedColumn: target.column });
+    }
+
     return moves;
   }
 
@@ -104,7 +109,7 @@ export class MoveGenerator {
   }
 
   generateKingMoves(piece) {
-    return this.generateStepMoves(piece, [
+    const moves = this.generateStepMoves(piece, [
       { row: -1, column: -1 },
       { row: -1, column: 0 },
       { row: -1, column: 1 },
@@ -114,6 +119,18 @@ export class MoveGenerator {
       { row: 1, column: 0 },
       { row: 1, column: 1 },
     ]);
+    if (!piece.hasMoved) {
+      [
+        { rookColumn: 7, path: [5, 6], target: 6, rookTarget: 5 },
+        { rookColumn: 0, path: [3, 2, 1], target: 2, rookTarget: 3 },
+      ].forEach((castle) => {
+        const rook = this.boardState.getPieceAt(piece.row, castle.rookColumn, piece.board);
+        if (rook?.type === 'rook' && rook.color === piece.color && !rook.hasMoved && castle.path.every((column) => this.boardState.isEmpty(piece.row, column, piece.board))) {
+          moves.push({ row: piece.row, column: castle.target, type: 'castle', rookColumn: castle.rookColumn, rookTargetColumn: castle.rookTarget });
+        }
+      });
+    }
+    return moves;
   }
 
   generateStepMoves(piece, offsets) {

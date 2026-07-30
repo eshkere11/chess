@@ -4,6 +4,9 @@ export class BoardState {
     this.grids = Object.fromEntries(floorKeys.map((key) => [key, this.createGrid()]));
     this.activeFloorKey = 'middle';
     this.grid = this.grids[this.activeFloorKey];
+    this.enPassantTarget = null;
+    this.halfmoveClock = 0;
+    this.positionHistory = [];
   }
 
   createGrid() {
@@ -48,6 +51,10 @@ export class BoardState {
     piece.setBoard(row, column);
     piece.hasMoved = true;
     return piece;
+  }
+
+  setEnPassantTarget(target) {
+    this.enPassantTarget = target ? { ...target } : null;
   }
 
   removePiece(piece, floorKey = piece.board) {

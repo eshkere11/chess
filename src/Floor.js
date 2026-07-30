@@ -2,6 +2,7 @@ import { BoxGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
 import { Board } from './Board.js';
 import { ElevatorPlatform } from './ElevatorPlatform.js';
 import { BOARD_FRAME_WIDTH, COLORS, FLOOR_HEIGHT, BOARD_SIZE, SQUARE_SIZE } from './constants.js';
+import { boardX, boardZ } from './BoardCoordinates.js';
 
 export class Floor {
   constructor(index, scene) {
@@ -32,12 +33,11 @@ export class Floor {
     this.group.add(this.board.group);
 
     // Four visually distinct elevator stations are placed on each floor for future movement support.
-    const cornerOffset = (BOARD_SIZE / 2) * SQUARE_SIZE - 0.5 * SQUARE_SIZE;
     const elevatorPositions = [
-      { x: -cornerOffset, z: -cornerOffset, row: 0, column: 0 },
-      { x: cornerOffset, z: -cornerOffset, row: 0, column: BOARD_SIZE - 1 },
-      { x: -cornerOffset, z: cornerOffset, row: BOARD_SIZE - 1, column: 0 },
-      { x: cornerOffset, z: cornerOffset, row: BOARD_SIZE - 1, column: BOARD_SIZE - 1 },
+      { x: boardX(0), z: boardZ(0), row: 0, column: 0 },
+      { x: boardX(BOARD_SIZE - 1), z: boardZ(0), row: 0, column: BOARD_SIZE - 1 },
+      { x: boardX(0), z: boardZ(BOARD_SIZE - 1), row: BOARD_SIZE - 1, column: 0 },
+      { x: boardX(BOARD_SIZE - 1), z: boardZ(BOARD_SIZE - 1), row: BOARD_SIZE - 1, column: BOARD_SIZE - 1 },
     ];
 
     this.elevators = elevatorPositions.map((position) => {
@@ -55,6 +55,10 @@ export class Floor {
         elevator.setHomeRook(piece);
       }
     });
+  }
+
+  setCoordinatePerspective(perspective) {
+    this.board.setCoordinatePerspective(perspective);
   }
 
   updateElevatorsForMove(piece, capturedPiece, fromRow, fromColumn, toRow, toColumn) {

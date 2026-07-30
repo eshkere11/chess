@@ -10,6 +10,7 @@ import {
 
 export const ELEVATOR_STATES = Object.freeze({
   AVAILABLE: 'available',
+  PARTIAL: 'partial',
   OCCUPIED: 'occupied',
   COOLDOWN: 'cooldown',
   BUSY: 'busy',
@@ -17,6 +18,7 @@ export const ELEVATOR_STATES = Object.freeze({
 
 const STATE_VISUALS = {
   [ELEVATOR_STATES.AVAILABLE]: { color: 0x15803d, emissive: 0x166534, intensity: 1.15, ring: 0x86efac, opacity: 0.9 },
+  [ELEVATOR_STATES.PARTIAL]: { color: 0x7e22ce, emissive: 0x581c87, intensity: 1.2, ring: 0xd8b4fe, opacity: 0.92 },
   [ELEVATOR_STATES.OCCUPIED]: { color: 0xb91c1c, emissive: 0x7f1d1d, intensity: 0.72, ring: 0xfca5a5, opacity: 0.68 },
   [ELEVATOR_STATES.COOLDOWN]: { color: 0xca8a04, emissive: 0x854d0e, intensity: 1.0, ring: 0xfde047, opacity: 0.86 },
   [ELEVATOR_STATES.BUSY]: { color: 0xc2410c, emissive: 0x9a3412, intensity: 1.55, ring: 0xfbbf24, opacity: 1 },
@@ -32,6 +34,8 @@ export class ElevatorPlatform {
     this.occupant = null;
     this.homeRook = null;
     this.cooldownActive = false;
+    this.visualOccupied = false;
+    this.partialActive = false;
     this.visual = STATE_VISUALS[this.state];
     this.group = new Group();
     this.group.position.set(boardPosition.x, 0.35, boardPosition.z);
@@ -95,6 +99,7 @@ export class ElevatorPlatform {
   occupy(piece, preserveBusy = false) {
     this.occupant = piece;
     piece.setElevator(this);
+    this.visualOccupied = true;
     if (!preserveBusy) this.refreshState();
   }
 
@@ -111,6 +116,7 @@ export class ElevatorPlatform {
     const previousOccupant = this.occupant;
     this.occupant = null;
     previousOccupant?.setElevator(null);
+    this.visualOccupied = false;
     if (this.state === ELEVATOR_STATES.BUSY) this.setState(ELEVATOR_STATES.AVAILABLE);
     this.refreshState();
   }
@@ -133,13 +139,32 @@ export class ElevatorPlatform {
     this.refreshState();
   }
 
+  syncOccupant(piece) {
+    if (this.occupant !== piece) {
+      this.occupant?.setElevator(null);
+      this.occupant = piece || null;
+      piece?.setElevator(this);
+    }
+    this.setVisualOccupied(Boolean(piece));
+  }
+
+  setVisualOccupied(occupied) {
+    this.visualOccupied = occupied;
+    this.refreshState();
+  }
+
+  setPartialActive(active) {
+    this.partialActive = active;
+    this.refreshState();
+  }
+
   isOnCooldown() {
     return this.cooldownActive;
   }
 
   canUse(piece) {
     return this.occupant === piece
-      && !(piece === this.homeRook && !piece.hasMoved)
+      && piece !== this.homeRook
       && this.state !== ELEVATOR_STATES.BUSY;
   }
 
@@ -149,8 +174,12 @@ export class ElevatorPlatform {
       this.setState(ELEVATOR_STATES.COOLDOWN);
       return;
     }
-    if (this.occupant) {
+    if (this.visualOccupied) {
       this.setState(ELEVATOR_STATES.OCCUPIED);
+      return;
+    }
+    if (this.partialActive) {
+      this.setState(ELEVATOR_STATES.PARTIAL);
       return;
     }
     this.setState(ELEVATOR_STATES.AVAILABLE);

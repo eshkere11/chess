@@ -1,10 +1,12 @@
 export class SelectionManager {
-  constructor(boardState, turnManager, highlightManager, animationManager, onMoveComplete) {
+  constructor(boardState, turnManager, highlightManager, animationManager, onMoveComplete, onMoveStart) {
     this.boardState = boardState;
     this.turnManager = turnManager;
     this.highlightManager = highlightManager;
     this.animationManager = animationManager;
     this.onMoveComplete = onMoveComplete;
+    this.onMoveStart = onMoveStart;
+    this.canControlPiece = null;
     this.selectedPiece = null;
   }
 
@@ -19,6 +21,10 @@ export class SelectionManager {
     }
 
     if (!this.turnManager.canMove(piece.color)) {
+      return false;
+    }
+
+    if (this.canControlPiece && !this.canControlPiece(piece)) {
       return false;
     }
 
@@ -49,18 +55,27 @@ export class SelectionManager {
       return false;
     }
 
-    const piece = this.selectedPiece;
-    const capturedPiece = this.boardState.getPieceAt(row, column, piece.board);
+    return this.executeMove(this.selectedPiece, move);
+  }
+
+  executeMove(piece, move) {
+    if (!piece || !move || this.animationManager.isAnimating || !this.turnManager.canMove(piece.color)) {
+      return false;
+    }
+    const capturedPiece = move.type === 'en-passant'
+      ? this.boardState.getPieceAt(move.capturedRow, move.capturedColumn, piece.board)
+      : this.boardState.getPieceAt(move.row, move.column, piece.board);
     const fromRow = piece.row;
     const fromColumn = piece.column;
+    this.onMoveStart?.(piece, capturedPiece, fromRow, fromColumn, move.row, move.column);
     this.clearSelection();
-    this.animationManager.animateMove(piece, row, column, () => {
+    this.animationManager.animateMove(piece, move.row, move.column, () => {
       if (capturedPiece && capturedPiece !== piece) {
         capturedPiece.root.removeFromParent();
       }
-      this.boardState.movePiece(piece, row, column);
-      this.onMoveComplete?.(piece, capturedPiece, fromRow, fromColumn, row, column);
-      this.turnManager.advanceTurn();
+      this.boardState.movePiece(piece, move.row, move.column);
+      Promise.resolve(this.onMoveComplete?.(piece, capturedPiece, fromRow, fromColumn, move.row, move.column, move))
+        .then(() => this.turnManager.advanceTurn());
     });
 
     return true;

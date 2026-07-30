@@ -5,6 +5,7 @@ import {
   MeshBasicMaterial,
 } from 'three';
 import { BOARD_SIZE, SQUARE_SIZE } from './constants.js';
+import { boardX, boardZ } from './BoardCoordinates.js';
 
 export class Piece {
   constructor(type, color, boardGroup, modelMesh = null) {
@@ -61,9 +62,18 @@ export class Piece {
     this.board = floorKey;
   }
 
+  replaceModel(type, modelMesh) {
+    this.type = type;
+    this.bodyGroup.clear();
+    this.baseHeight = 0;
+    this.bodyGroup.position.y = 0;
+    this.bodyGroup.add(modelMesh);
+    this.root.traverse((child) => { child.userData.piece = this; });
+  }
+
   updatePosition() {
-    const x = (this.column - (BOARD_SIZE - 1) / 2) * SQUARE_SIZE;
-    const z = ((BOARD_SIZE - 1) / 2 - this.row) * SQUARE_SIZE;
+    const x = boardX(this.column);
+    const z = boardZ(this.row);
     this.root.position.set(x, 0, z);
   }
 
